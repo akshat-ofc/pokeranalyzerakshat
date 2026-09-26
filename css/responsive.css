@@ -1,0 +1,33 @@
+/* Tablet */
+@media (max-width: 1080px) {
+  .layout { grid-template-columns: 1fr; }
+  .col-results { order: -1; }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .topbar-inner { padding: 10px 14px; flex-wrap: wrap; }
+  .brand-name { font-size: 13px; }
+  .nav-btn { padding: 7px 10px; font-size: 12px; }
+  .layout { padding: 12px 12px 140px; gap: 12px; }
+  .panel { padding: 14px; border-radius: 14px; }
+  .field-grid { grid-template-columns: repeat(2, 1fr); }
+  .card-slot { width: 50px; height: 68px; font-size: 18px; }
+  .equity-value { font-size: 48px; }
+  .action-value { font-size: 22px; }
+  .quick-stats { grid-template-columns: repeat(2, 1fr); }
+  .suit-row { grid-template-columns: 46px repeat(13, 1fr); }
+  .pick-card { font-size: 11px; }
+  .range-matrix { max-width: none; }
+  .range-body { flex-direction: column; }
+
+  /* Sticky compact result bar for one-handed use */
+  .result-hero {
+    position: sticky; top: 8px; z-index: 20;
+  }
+}
+
+@media (max-width: 400px) {
+  .quick-stats { grid-template-columns: 1fr 1fr; }
+  .equity-value { font-size: 40px; }
+}

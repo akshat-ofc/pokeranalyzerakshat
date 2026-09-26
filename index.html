@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Poker Analyzer — Equity &amp; Decision Engine</title>
+<meta name="description" content="Texas Hold'em equity, pot odds, EV and decision analysis. Educational tool — probabilities are estimates, not guarantees.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">♠</span>
+      <span class="brand-name">POKER ANALYZER</span>
+    </div>
+    <nav class="topnav" aria-label="Primary">
+      <button class="nav-btn" data-panel="history" id="btnHistory" type="button">History</button>
+      <button class="nav-btn" data-panel="settings" id="btnSettings" type="button">Settings</button>
+      <button class="nav-btn" data-panel="help" id="btnHelp" type="button">Help</button>
+      <div class="mode-toggle" role="group" aria-label="Display mode">
+        <button class="mode-btn active" data-mode="fast" id="modeFastBtn" type="button">Fast</button>
+        <button class="mode-btn" data-mode="advanced" id="modeAdvancedBtn" type="button">Advanced</button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="layout">
+
+  <!-- ============ LEFT / INPUT COLUMN ============ -->
+  <section class="col col-inputs" aria-label="Hand setup">
+
+    <div class="panel" id="panelTableSetup">
+      <h2 class="panel-title">Table setup</h2>
+      <div class="field-grid">
+        <div class="field">
+          <label for="playersCount">Players</label>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" id="playersMinus" aria-label="Fewer players">−</button>
+            <span id="playersCount" class="stepper-value">6</span>
+            <button type="button" class="stepper-btn" id="playersPlus" aria-label="More players">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="positionSelect">Position</label>
+          <select id="positionSelect">
+            <option>UTG</option><option>UTG+1</option><option>MP</option><option>HJ</option>
+            <option>CO</option><option selected>BTN</option><option>SB</option><option>BB</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="stackInput">Stack</label>
+          <input type="number" id="stackInput" min="0" step="1" value="100">
+        </div>
+        <div class="field">
+          <label for="potInput">Pot <button class="qbtn" type="button" data-tip="Pot before the opponent's current bet is added.">?</button></label>
+          <input type="number" id="potInput" min="0" step="1" value="12">
+        </div>
+        <div class="field">
+          <label for="betInput">Current bet</label>
+          <input type="number" id="betInput" min="0" step="1" value="4">
+        </div>
+        <div class="field">
+          <label for="callInput">Call amount</label>
+          <input type="number" id="callInput" min="0" step="1" value="4">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel-title">My hand</h2>
+      <div class="card-slots" id="heroSlots">
+        <button class="card-slot empty" data-slot="hero-0" type="button" aria-label="Hole card 1">?</button>
+        <button class="card-slot empty" data-slot="hero-1" type="button" aria-label="Hole card 2">?</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel-title">Board <span class="street-badge" id="streetBadge">PREFLOP</span></h2>
+      <div class="card-slots" id="boardSlots">
+        <button class="card-slot empty" data-slot="board-0" type="button" aria-label="Flop card 1">?</button>
+        <button class="card-slot empty" data-slot="board-1" type="button" aria-label="Flop card 2">?</button>
+        <button class="card-slot empty" data-slot="board-2" type="button" aria-label="Flop card 3">?</button>
+        <button class="card-slot empty" data-slot="board-3" type="button" aria-label="Turn card">?</button>
+        <button class="card-slot empty" data-slot="board-4" type="button" aria-label="River card">?</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title-row">
+        <h2 class="panel-title">Opponents</h2>
+        <span class="muted small" id="opponentCombosSummary"></span>
+      </div>
+      <div id="opponentsList" class="opponents-list"></div>
+    </div>
+
+    <button class="calc-btn" id="calculateBtn" type="button">CALCULATE</button>
+    <div class="calc-meta muted small" id="calcMeta"></div>
+  </section>
+
+  <!-- ============ RIGHT / RESULTS COLUMN ============ -->
+  <section class="col col-results" aria-label="Analysis results">
+
+    <!-- FAST MODE RESULT CARD -->
+    <div class="panel result-hero" id="fastResultPanel">
+      <div class="result-hero-top">
+        <div class="equity-block">
+          <div class="equity-label">EQUITY <button class="qbtn" type="button" data-tip="Your expected share of the pot if the hand reaches showdown, based on the selected opponent assumptions.">?</button></div>
+          <div class="equity-value" id="equityValue">—</div>
+          <div class="equity-range muted small" id="equityRange"></div>
+        </div>
+        <div class="action-block">
+          <div class="action-value" id="actionValue">—</div>
+          <div class="confidence-badge" id="confidenceBadge">—</div>
+        </div>
+      </div>
+
+      <div class="wtl-row">
+        <div class="wtl-item win"><span class="wtl-label">WIN</span><span class="wtl-val" id="winVal">—</span></div>
+        <div class="wtl-item tie"><span class="wtl-label">TIE</span><span class="wtl-val" id="tieVal">—</span></div>
+        <div class="wtl-item lose"><span class="wtl-label">LOSE</span><span class="wtl-val" id="loseVal">—</span></div>
+      </div>
+      <div class="wtl-bar" id="wtlBar"><div class="wtl-bar-win"></div><div class="wtl-bar-tie"></div><div class="wtl-bar-lose"></div></div>
+
+      <div class="quick-stats">
+        <div class="qstat"><span class="qstat-label">Pot odds</span><span class="qstat-val" id="qsPotOdds">—</span></div>
+        <div class="qstat"><span class="qstat-label">Required equity</span><span class="qstat-val" id="qsRequired">—</span></div>
+        <div class="qstat"><span class="qstat-label">EV</span><span class="qstat-val" id="qsEV">—</span></div>
+        <div class="qstat"><span class="qstat-label">Edge</span><span class="qstat-val" id="qsEdge">—</span></div>
+      </div>
+
+      <div class="reason-box" id="reasonBox"></div>
+    </div>
+
+    <!-- ADVANCED MODE PANELS (hidden in fast mode) -->
+    <div class="advanced-only" id="advancedPanels">
+
+      <div class="panel">
+        <h2 class="panel-title">Calculation quality</h2>
+        <div class="field-grid" id="calcQualityGrid"></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Outs &amp; draws</h2>
+        <div id="outsPanel">Requires a flop or turn board.</div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Board texture</h2>
+        <div id="boardTexturePanel">Requires at least 3 board cards.</div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Street-by-street equity</h2>
+        <div id="streetHistoryPanel" class="muted small">Calculate at each street to build this chart.</div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">What cards help me? <button class="qbtn" type="button" data-tip="Re-computes equity for every possible next card. Only available with one street of unknown board cards remaining and fully-specified opponents (fastest with exact opponent hands).">?</button></h2>
+        <button class="secondary-btn" id="nextCardBtn" type="button">Analyze next card</button>
+        <div id="nextCardPanel"></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Hand category distribution (Monte Carlo)</h2>
+        <div id="categoryDistPanel" class="muted small">Available after a Monte Carlo calculation.</div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- ============ CARD PICKER OVERLAY ============ -->
+<div class="overlay hidden" id="cardPickerOverlay" role="dialog" aria-modal="true" aria-label="Card picker">
+  <div class="picker-sheet">
+    <div class="picker-header">
+      <div class="picker-title" id="pickerTitle">Select card</div>
+      <button class="icon-btn" id="pickerClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="picker-toolbar">
+      <button class="tool-btn" id="pickerUndo" type="button">Undo</button>
+      <button class="tool-btn" id="pickerClear" type="button">Clear</button>
+      <button class="tool-btn" id="pickerRandom" type="button">Randomize</button>
+      <div class="recent-cards" id="recentCards"></div>
+    </div>
+    <div class="card-grid" id="cardGrid"></div>
+  </div>
+</div>
+
+<!-- ============ RANGE MATRIX OVERLAY ============ -->
+<div class="overlay hidden" id="rangeOverlay" role="dialog" aria-modal="true" aria-label="Opponent range">
+  <div class="picker-sheet range-sheet">
+    <div class="picker-header">
+      <div class="picker-title" id="rangeTitle">Opponent range</div>
+      <button class="icon-btn" id="rangeClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="range-presets">
+      <button class="tool-btn preset-btn" data-pct="5">Top 5%</button>
+      <button class="tool-btn preset-btn" data-pct="10">Top 10%</button>
+      <button class="tool-btn preset-btn" data-pct="15">Top 15%</button>
+      <button class="tool-btn preset-btn" data-pct="20">Top 20%</button>
+      <button class="tool-btn preset-btn" data-pct="25">Top 25%</button>
+      <button class="tool-btn preset-btn" data-pct="30">Top 30%</button>
+      <button class="tool-btn" id="rangeSelectAll">Select all</button>
+      <button class="tool-btn" id="rangeClear">Clear</button>
+    </div>
+    <div class="range-body">
+      <div class="range-matrix" id="rangeMatrix"></div>
+      <div class="range-side">
+        <label for="rangeText">Text notation</label>
+        <textarea id="rangeText" rows="4" placeholder="AA,KK,QQ,AKs,AQs,JJ-TT"></textarea>
+        <button class="secondary-btn" id="rangeTextApply" type="button">Apply text</button>
+        <div class="muted small" id="rangeTextError"></div>
+        <div class="combo-count" id="rangeComboCount">Selected combinations: 0 / 1326</div>
+        <button class="calc-btn" id="rangeDone" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HISTORY OVERLAY ============ -->
+<div class="overlay hidden" id="historyOverlay" role="dialog" aria-modal="true" aria-label="History">
+  <div class="picker-sheet">
+    <div class="picker-header">
+      <div class="picker-title">History</div>
+      <button class="icon-btn" id="historyClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="picker-toolbar">
+      <button class="tool-btn" id="historyClearAll" type="button">Clear all</button>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS OVERLAY ============ -->
+<div class="overlay hidden" id="settingsOverlay" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="picker-sheet">
+    <div class="picker-header">
+      <div class="picker-title">Settings</div>
+      <button class="icon-btn" id="settingsClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-row">
+        <label for="setSound">Interface sounds</label>
+        <input type="checkbox" id="setSound">
+      </div>
+      <div class="settings-row">
+        <label for="setVoice">Enable voice guidance</label>
+        <input type="checkbox" id="setVoice">
+      </div>
+      <div class="settings-row">
+        <label for="setVoiceStyle">Voice style</label>
+        <select id="setVoiceStyle"><option value="short">Short</option><option value="normal" selected>Normal</option><option value="detailed">Detailed</option></select>
+      </div>
+      <div class="settings-row">
+        <label for="setVoiceSpeed">Voice speed</label>
+        <input type="range" id="setVoiceSpeed" min="0.6" max="1.6" step="0.1" value="1">
+      </div>
+      <div class="settings-row">
+        <label for="setVoiceVolume">Volume</label>
+        <input type="range" id="setVoiceVolume" min="0" max="1" step="0.05" value="1">
+      </div>
+      <div class="settings-row">
+        <label for="setSimIterations">Monte Carlo simulations</label>
+        <select id="setSimIterations">
+          <option value="10000">10,000</option>
+          <option value="25000">25,000</option>
+          <option value="50000">50,000</option>
+          <option value="100000" selected>100,000</option>
+          <option value="250000">250,000</option>
+          <option value="500000">500,000</option>
+          <option value="1000000">1,000,000</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="setCurrency">Display units</label>
+        <select id="setCurrency"><option value="BB">Big blinds (BB)</option><option value="chips">Chips</option><option value="currency">Currency (₹)</option></select>
+      </div>
+      <div class="settings-row">
+        <label for="setAnimations">Animations</label>
+        <input type="checkbox" id="setAnimations" checked>
+      </div>
+      <button class="secondary-btn" id="shareScenarioBtn" type="button">Copy shareable link</button>
+      <div class="muted small" id="shareStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HELP OVERLAY ============ -->
+<div class="overlay hidden" id="helpOverlay" role="dialog" aria-modal="true" aria-label="Help">
+  <div class="picker-sheet">
+    <div class="picker-header">
+      <div class="picker-title">Help &amp; definitions</div>
+      <button class="icon-btn" id="helpClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-body help-body">
+      <p><strong>Win %</strong> — percentage of simulated/enumerated outcomes where your hand wins outright.</p>
+      <p><strong>Tie %</strong> — percentage where the pot is split between two or more hands.</p>
+      <p><strong>Lose %</strong> — percentage where your hand loses.</p>
+      <p><strong>Equity</strong> — your expected share of the pot, counting split pots proportionally. Equity is <em>not</em> the same thing as win probability.</p>
+      <p><strong>Pot odds / required equity</strong> — the minimum equity you need for a call to break even, ignoring future betting rounds.</p>
+      <p><strong>EV</strong> — expected value of calling under the stated assumptions (single street, no fold equity). See the assumptions listed with every EV figure.</p>
+      <p><strong>Outs</strong> — remaining cards that upgrade your hand's category. Probabilities use exact combinatorics, not the "outs × 2/4" shortcut.</p>
+      <p class="muted small">Every number in this app is a probabilistic estimate under the assumptions you selected (especially opponent ranges). None of it is a guarantee of any outcome. Please gamble responsibly, and only where legal in your jurisdiction.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/cards.js"></script>
+<script src="js/evaluator.js"></script>
+<script src="js/ranges.js"></script>
+<script src="js/equity.js"></script>
+<script src="js/outs.js"></script>
+<script src="js/boardTexture.js"></script>
+<script src="js/potOdds.js"></script>
+<script src="js/ev.js"></script>
+<script src="js/decision.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
